@@ -31,20 +31,46 @@ int main(int argc, char *argv[]) {
   ifstream file;
   file.open(config_file);
   while(getline(file, line)) {
-    int write = 0
+    //cout << "10" << endl;
     string buf;
     stringstream iss(line);
     vector<string> words;
     while(getline(iss, buf, '=')) {
       words.push_back(buf);
     }
+    if(words[0] == "PERIOD_FETCH") {
+      stringstream ss(words[1]);
+      int tmp;
+      ss >> tmp;
+      PERIOD_FETCH = tmp;
+    }
+    else if(words[0] == "NUM_FETCH") {
+      stringstream ss(words[1]);
+      int tmp;
+      ss >> tmp;
+      NUM_FETCH = tmp;
+    }
+    else if(words[0] == "NUM_PARSE") {
+      stringstream ss(words[1]);
+      int tmp;
+      ss >> tmp;
+      NUM_PARSE = tmp;
+    }
+    else if(words[0] == "SEARCH_FILE") {
+      SEARCH_FILE = words[1];
+    }
+    else if(words[0] == "SITE_FILE") {
+      SITE_FILE = words[1];
+    }
+    else {
+      cout << "Warning: " << words[0] << " is not a parameter" << endl;
+    }
+    /* 
     for(vector<string>::iterator i = words.begin(); i != words.end(); ++i) {
       cout << *i << endl;
-      if(*i == "PERIOD_FETCH") {
-        //Set the value for the next one
-      }
     } 
+    */
   }
-  
+  //cout << PERIOD_FETCH << endl;
   file.close();
 }
