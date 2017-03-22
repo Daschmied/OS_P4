@@ -6,8 +6,35 @@
 #include <sstream>
 #include <fstream>
 #include <vector>
-
+#include <curl/curl.h>
+#include <cstring>
+#include <queue>
 using namespace std;
+
+// memory structure and callback function from https://curl.haxx.se/libcurl/c/getinmemory.html
+struct MemoryStruct{
+	char *memory;
+	size_t size;
+	
+};
+static size_t WriteMemoryCallback(void *contents, size_t size, size_t nmemb, void* userp){
+	size_t realsize = size * nmemb;
+	struct MemoryStruct *mem = (struct MemoryStruct *)userp;
+
+  mem->memory = (char*)realloc(mem->memory, mem->size + realsize + 1);
+  if(mem->memory == NULL) {
+    /* out of memory! */
+    printf("not enough memory (realloc returned NULL)\n");
+    return 0;
+  }
+
+  memcpy(&(mem->memory[mem->size]), contents, realsize);
+  mem->size += realsize;
+  mem->memory[mem->size] = 0;
+
+  return realsize;
+}
+
 
 int main(int argc, char *argv[]) {
   string line;
@@ -73,4 +100,37 @@ int main(int argc, char *argv[]) {
   }
   //cout << PERIOD_FETCH << endl;
   file.close();
+  
+  //easy_curl
+  
+  queue<string> webpages;
+  
+  file.open(SITE_FILE.c_str());
+  while(getline(file, line)) {
+	
+    CURL *curl_handle;
+	CURLcode res;
+	struct MemoryStruct chunk;
+	chunk.memory = (char*) malloc(1);
+	chunk.size = 0;
+	curl_global_init(CURL_GLOBAL_ALL);
+	
+	curl_handle = curl_easy_init();
+	
+	curl_easy_setopt(curl_handle, CURLOPT_URL, line.c_str());
+	curl_easy_setopt(curl_handle, CURLOPT_WRITEFUNCTION, WriteMemoryCallback);
+	curl_easy_setopt(curl_handle, CURLOPT_WRITEDATA, (void *)&chunk);
+	curl_easy_setopt(curl_handle, CURLOPT_USERAGENT, "libcurl-agent/1.0");
+	res = curl_easy_perform(curl_handle);
+	if(res != CURLE_OK){
+		cout << "error" << endl;
+	}
+	else{
+		string a = chunk.memory;
+        webpages.push(a);
+	}
+	curl_easy_cleanup(curl_handle);
+	free(chunk.memory);
+	curl_global_cleanup();
+  }
 }
