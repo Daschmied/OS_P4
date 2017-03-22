@@ -9,17 +9,18 @@
 #include <curl/curl.h>
 #include <cstring>
 #include <queue>
+
 using namespace std;
 
 // memory structure and callback function from https://curl.haxx.se/libcurl/c/getinmemory.html
 struct MemoryStruct{
-	char *memory;
-	size_t size;
-	
+  char *memory;
+  size_t size;
+
 };
 static size_t WriteMemoryCallback(void *contents, size_t size, size_t nmemb, void* userp){
-	size_t realsize = size * nmemb;
-	struct MemoryStruct *mem = (struct MemoryStruct *)userp;
+  size_t realsize = size * nmemb;
+  struct MemoryStruct *mem = (struct MemoryStruct *)userp;
 
   mem->memory = (char*)realloc(mem->memory, mem->size + realsize + 1);
   if(mem->memory == NULL) {
@@ -58,7 +59,6 @@ int main(int argc, char *argv[]) {
   ifstream file;
   file.open(config_file);
   while(getline(file, line)) {
-    //cout << "10" << endl;
     string buf;
     stringstream iss(line);
     vector<string> words;
@@ -87,50 +87,101 @@ int main(int argc, char *argv[]) {
       SEARCH_FILE = words[1];
     }
     else if(words[0] == "SITE_FILE") {
+      //cout << words[0] << words[1] << endl;
       SITE_FILE = words[1];
     }
     else {
       cout << "Warning: " << words[0] << " is not a parameter" << endl;
     }
     /* 
-    for(vector<string>::iterator i = words.begin(); i != words.end(); ++i) {
-      cout << *i << endl;
-    } 
-    */
+       for(vector<string>::iterator i = words.begin(); i != words.end(); ++i) {
+       cout << *i << endl;
+       } 
+       */
   }
   //cout << PERIOD_FETCH << endl;
   file.close();
-  
+
+  vector<string> searchterms;
+  file.open(SEARCH_FILE.c_str());
+  while(getline(file, line)) {
+    searchterms.push_back(line);
+  }
+  file.close();
+
+  /* 
+     for(vector<string>::iterator i = searchterms.begin(); i != searchterms.end(); ++i) {
+     cout << *i << endl;
+     } 
+     */
+
   //easy_curl
-  
+
+  queue<string> sites;
   queue<string> webpages;
-  
+
+  //cout << SITE_FILE << endl;
   file.open(SITE_FILE.c_str());
   while(getline(file, line)) {
-	
     CURL *curl_handle;
-	CURLcode res;
-	struct MemoryStruct chunk;
-	chunk.memory = (char*) malloc(1);
-	chunk.size = 0;
-	curl_global_init(CURL_GLOBAL_ALL);
-	
-	curl_handle = curl_easy_init();
-	
-	curl_easy_setopt(curl_handle, CURLOPT_URL, line.c_str());
-	curl_easy_setopt(curl_handle, CURLOPT_WRITEFUNCTION, WriteMemoryCallback);
-	curl_easy_setopt(curl_handle, CURLOPT_WRITEDATA, (void *)&chunk);
-	curl_easy_setopt(curl_handle, CURLOPT_USERAGENT, "libcurl-agent/1.0");
-	res = curl_easy_perform(curl_handle);
-	if(res != CURLE_OK){
-		cout << "error" << endl;
-	}
-	else{
-		string a = chunk.memory;
-        webpages.push(a);
-	}
-	curl_easy_cleanup(curl_handle);
-	free(chunk.memory);
-	curl_global_cleanup();
+    CURLcode res;
+    struct MemoryStruct chunk;
+    chunk.memory = (char*) malloc(1);
+    chunk.size = 0;
+    curl_global_init(CURL_GLOBAL_ALL);
+
+    curl_handle = curl_easy_init();
+
+    curl_easy_setopt(curl_handle, CURLOPT_URL, line.c_str());
+    curl_easy_setopt(curl_handle, CURLOPT_WRITEFUNCTION, WriteMemoryCallback);
+    curl_easy_setopt(curl_handle, CURLOPT_WRITEDATA, (void *)&chunk);
+    curl_easy_setopt(curl_handle, CURLOPT_USERAGENT, "libcurl-agent/1.0");
+    curl_easy_setopt(curl_handle, CURLOPT_FOLLOWLOCATION, 1);
+    res = curl_easy_perform(curl_handle);
+    if(res != CURLE_OK){
+      cout << "error" << endl;
+    }
+    else{
+      string a = chunk.memory;
+      sites.push(line);
+      webpages.push(a);
+    }
+    curl_easy_cleanup(curl_handle);
+    free(chunk.memory);
+    curl_global_cleanup();
   }
+  file.close(); 
+  /* 
+     while(!webpages.empty()){
+     string w = webpages.front();
+     cout << w << endl;
+     webpages.pop();
+     }
+
+     while(!sites.empty()){
+     string w = sites.front();
+     cout << w << endl;
+     sites.pop();
+     }
+     */
+
+  while(!webpages.empty()) {
+    string site = sites.front();
+    string test = webpages.front();
+    webpages.pop();
+    sites.pop(); 
+    cout << site << endl;
+    for(vector<string>::iterator i = searchterms.begin(); i != searchterms.end(); ++i)
+    {
+      int count = 0;
+      size_t nPos = test.find(*i, 0);
+      while(nPos != string::npos) {
+        count++;
+        nPos = test.find(*i, nPos+1);
+      }
+      cout << *i << ": " << count << endl;
+    }
+  }
+
+
 }
