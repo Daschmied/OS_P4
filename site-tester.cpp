@@ -157,8 +157,6 @@ int main(int argc, char *argv[]) {
   }
   file.close();
 
- 
-
   pthread_t *ProducerThreads = (pthread_t*)malloc(NUM_FETCH * sizeof(pthread_t));
   pthread_t *ConsumerThreads = (pthread_t*)malloc(NUM_PARSE * sizeof(pthread_t));
   
@@ -167,7 +165,6 @@ int main(int argc, char *argv[]) {
     int errnum = pthread_create(&ProducerThreads[i], NULL, producer_function, NULL); 
     if(errnum != 0) {
       printf("Error creating thread: %s\n", strerror(errnum));
-      //maybe some other behavior?
       exit(1);
     } 
   }
@@ -217,6 +214,7 @@ void change_flag(int sig) {
     file << output_queue.front() << endl;
     output_queue.pop();
   }
+  file.close();
   flag = true;
   periods ++;
 }
